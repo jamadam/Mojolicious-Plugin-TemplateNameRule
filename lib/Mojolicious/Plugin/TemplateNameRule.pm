@@ -4,7 +4,8 @@ use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
 our $VERSION = '0.01';
     
-    __PACKAGE__->attr('template_name');
+    __PACKAGE__->attr('pattern', '%template.%format.%handler');
+    
     ### ---
     ### register
     ### ---
@@ -13,15 +14,61 @@ our $VERSION = '0.01';
         
         no warnings 'redefine';
         
-        $self->template_name($options->{cb});
+        $self->pattern($options->{pattern});
         
         *Mojolicious::Renderer::template_name = sub {
-            my ($renderer, $options) = @_;
-            my $template    = $options->{template};
-            my $format      = $options->{format};
-            my $handler     = $options->{handler};
-            return $self->template_name->($template, $format, $handler);
+            my ($r, $options) = @_;
+            
+            if (! $r->{templates} && ! $r->{data}) {
+                my $idxs = {};
+                my $regex = do {
+                    my $tmp = $self->pattern;
+                    my $idx = 0;
+                    while ($tmp =~ qr{%(\w+)}) {
+                        my $name = $1;
+                        $idxs->{$name} = $idx;
+                        $idx++;
+                        $tmp =~ s{%$name}{(\\w+)};
+                    }
+                    $tmp;
+                };
+                if ($idxs->{handler}) {
+                    for (map { sort @{Mojo::Home->new($_)->list_files} }
+                                                                @{$r->paths}) {
+                        if (my @capture = ($_ =~ qr{$regex})) {
+                            my $short = $self->_template_name(
+                                $capture[$idxs->{template}],
+                                $capture[$idxs->{format}],
+                            );
+                            $r->{templates}->{$short} ||=
+                                                    $capture[$idxs->{handler}];
+                        }
+                    }
+                    for (map { sort keys %{Mojo::Command->get_all_data($_)} }
+                                                        @{$r->classes}) {
+                        if (my @capture = ($_ =~ qr{$regex})) {
+                            my $short = $self->_template_name(
+                                $capture[$idxs->{template}],
+                                $capture[$idxs->{format}],
+                            );
+                            $r->{data}->{$short} ||= $capture[$idxs->{handler}];
+                        }
+                    }
+                }
+            }
+            
+            $self->_template_name(
+                $options->{template}, $options->{format}, $options->{handler});
         };
+        
+        sub _template_name {
+            my ($self, $template, $format, $handler) = @_;
+            my $p = $self->pattern;
+            $p =~ s{%template}{$template||''}e;
+            $p =~ s{%format}{$format||''}e;
+            $p =~ s{%handler}{$handler||''}e;
+            return $p;
+        }
     }
 
 1;
@@ -33,8 +80,21 @@ __END__
 Mojolicious::Plugin::TemplateNameRule - Customize template naming rule
 
 =head1 SYNOPSIS
-  
+
+    # index.ep.html style
+    plugin TemplateNameRule => {
+        pattern => '%template.%handler.%format'
+    };
+    
+    # no renderer type like index.html
+    plugin TemplateNameRule => {
+        pattern => '%template.%format'
+    };
+
 =head1 DESCRIPTION
+
+This plugin allows you to customize the naming rule for templates.
+This plugin does very evil hack inside of it and might not work in any cases.
 
 =head2 OPTIONS
 
@@ -45,71 +105,6 @@ Mojolicious::Plugin::TemplateNameRule - Customize template naming rule
 $plugin->register;
 
 Register plugin hooks in L<Mojolicious> application.
-
-=head2 psgi_env_to_mojo_req
-
-This is a utility method. This is for internal use.
-
-    my $mojo_req = psgi_env_to_mojo_req($psgi_env)
-
-=head2 mojo_req_to_psgi_env
-
-This is a utility method. This is for internal use.
-
-    my $plack_env = mojo_req_to_psgi_env($mojo_req)
-
-=head2 psgi_res_to_mojo_res
-
-This is a utility method. This is for internal use.
-
-    my $mojo_res = psgi_res_to_mojo_res($psgi_res)
-
-=head2 mojo_res_to_psgi_res
-
-This is a utility method. This is for internal use.
-
-    my $psgi_res = mojo_res_to_psgi_res($mojo_res)
-
-=head1 Example
-
-Plack::Middleware::Auth::Basic
-
-    $self->plugin(plack_middleware => [
-        'Auth::Basic' => sub {shift->req->url =~ qr{^/?path1/}}, {
-            authenticator => sub {
-                my ($user, $pass) = @_;
-                return $user eq 'user1' && $pass eq 'pass';
-            }
-        },
-        'Auth::Basic' => sub {shift->req->url =~ qr{^/?path2/}}, {
-            authenticator => sub {
-                my ($user, $pass) = @_;
-                return $user eq 'user2' && $pass eq 'pass2';
-            }
-        },
-    ]);
-
-Plack::Middleware::ErrorDocument
-
-    $self->plugin('plack_middleware', [
-        ErrorDocument => {
-            500 => "$FindBin::Bin/errors/500.html"
-        },
-        ErrorDocument => {
-            404 => "/errors/404.html",
-            subrequest => 1,
-        },
-        Static => {
-            path => qr{^/errors},
-            root => $FindBin::Bin
-        },
-    ]);
-
-Plack::Middleware::JSONP
-
-    $self->plugin('plack_middleware', [
-        JSONP => {callback_key => 'json.p'},
-    ]);
 
 =head1 AUTHOR
 
