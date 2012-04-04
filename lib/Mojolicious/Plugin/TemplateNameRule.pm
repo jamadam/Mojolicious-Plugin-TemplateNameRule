@@ -22,16 +22,17 @@ our $VERSION = '0.01';
             if (! $r->{templates} && ! $r->{data}) {
                 my $idxs = {};
                 my $regex = do {
-                    my $tmp = $self->pattern;
+                    my $tmp = quotemeta($self->pattern);
                     my $idx = 0;
-                    while ($tmp =~ qr{%(\w+)}) {
+                    while ($tmp =~ qr{\\%(\w+)}) {
                         my $name = $1;
                         $idxs->{$name} = $idx;
                         $idx++;
-                        $tmp =~ s{%$name}{(\\w+)};
+                        $tmp =~ s{\\%$name}{(.+?)};
                     }
-                    $tmp;
+                    '^'. $tmp. '$';
                 };
+                
                 if ($idxs->{handler}) {
                     for (map { sort @{Mojo::Home->new($_)->list_files} }
                                                                 @{$r->paths}) {
