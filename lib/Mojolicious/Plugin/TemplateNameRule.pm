@@ -95,7 +95,13 @@ Mojolicious::Plugin::TemplateNameRule - Customize template naming rule
 =head1 DESCRIPTION
 
 This plugin allows you to customize the naming rule for templates.
-This plugin does very evil hack inside of it and might not work in any cases.
+
+This plugin is motivated by a desire to cooperate on templating with designers.
+In my case, Adobe Dreamweaver can't handle .html.ep as html.
+To solve this, you can rename templates into .ep.html style.
+
+Note that the plugin does very evil hack inside of it and might not work
+in any cases.
 
 =head2 OPTIONS
 

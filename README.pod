@@ -1,1 +1,49 @@
-Customize template naming rule
+=head1 NAME
+
+Mojolicious::Plugin::TemplateNameRule - Customize template naming rule
+
+=head1 SYNOPSIS
+
+    # index.ep.html style
+    plugin TemplateNameRule => {
+        pattern => '%template.%handler.%format'
+    };
+    
+    # no renderer type like index.html
+    plugin TemplateNameRule => {
+        pattern => '%template.%format'
+    };
+
+=head1 DESCRIPTION
+
+This plugin allows you to customize the naming rule for templates.
+
+This plugin is motivated by a desire to cooperate on templating with designers.
+In my case, Adobe Dreamweaver can't handle .html.ep as html.
+To solve this, you can rename templates into .ep.html style.
+
+Note that the plugin does very evil hack inside of it and might not work
+in any cases.
+
+=head2 OPTIONS
+
+=head1 METHODS
+
+=head2 register
+
+$plugin->register;
+
+Register plugin hooks in L<Mojolicious> application.
+
+=head1 AUTHOR
+
+Sugama Keita, E<lt>sugama@jamadam.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2011 by Sugama Keita.
+
+This program is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=cut
